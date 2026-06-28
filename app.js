@@ -6,8 +6,6 @@
    Data persists in localStorage.
    ========================================================= */
 
-const STORAGE_KEY = "toj_articles_v1";
-const VIEWS_KEY = "toj_views_v1";
 const ADMIN_PW = "solojournal2026";
 const SESSION_KEY = "toj_admin_session";
 
@@ -18,6 +16,16 @@ const PHONE_NUMBER = "+91 6393079532";
 const YT_NAME = "ADI GEOSPACE";
 const YT_URL = "https://www.youtube.com/@Adigeospace";
 const FORMSPREE_ENDPOINT = "https://formspree.io/f/xeebkkyp";
+
+/* ---------- Supabase config (shared database for all visitors) ---------- */
+const SUPABASE_URL = "https://uphlhpzgozzswxsacuam.supabase.co";
+const SUPABASE_KEY = "sb_publishable_ihyMlIjeD1YJk6yZDvEbgQ_3VUrDfAR";
+const SUPABASE_REST = `${SUPABASE_URL}/rest/v1/articles`;
+const SUPABASE_HEADERS = {
+  apikey: SUPABASE_KEY,
+  Authorization: `Bearer ${SUPABASE_KEY}`,
+  "Content-Type": "application/json",
+};
 
 /* ---------- seed data so the site isn't empty on first load ---------- */
 const SEED_ARTICLES = [
@@ -75,62 +83,146 @@ const SEED_ARTICLES = [
   },
 ];
 
-/* ---------- storage helpers ---------- */
-function loadArticles() {
+/* ---------- storage helpers (Supabase-backed, shared across all visitors) ---------- */
+let seedAttempted = false;
+
+async function loadArticles() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_ARTICLES));
-      return [...SEED_ARTICLES];
+    const res = await fetch(`${SUPABASE_REST}?select=*&order=timestamp.desc`, {
+      headers: SUPABASE_HEADERS,
+    });
+    if (!res.ok) throw new Error(`Supabase load failed: ${res.status}`);
+    const rows = await res.json();
+
+    if (rows.length === 0 && !seedAttempted) {
+      seedAttempted = true;
+      await seedDatabase();
+      const res2 = await fetch(`${SUPABASE_REST}?select=*&order=timestamp.desc`, {
+        headers: SUPABASE_HEADERS,
+      });
+      const rows2 = await res2.json();
+      return rows2.map(normalizeRow);
     }
-    return JSON.parse(raw);
+
+    return rows.map(normalizeRow);
   } catch (e) {
-    console.error("Failed to load articles", e);
-    return [...SEED_ARTICLES];
+    console.error("Failed to load articles from Supabase", e);
+    showToast("Could not connect to the database. Check your connection and reload.");
+    return [];
   }
 }
 
-function saveArticles(list) {
+function normalizeRow(row) {
+  return {
+    id: row.id,
+    section: row.section,
+    headline: row.headline,
+    deck: row.deck,
+    byline: row.byline,
+    body: row.body,
+    image: row.image,
+    caption: row.caption,
+    breaking: row.breaking,
+    featured: row.featured,
+    timestamp: row.timestamp,
+    views: row.views || 0,
+  };
+}
+
+async function seedDatabase() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    await fetch(SUPABASE_REST, {
+      method: "POST",
+      headers: { ...SUPABASE_HEADERS, Prefer: "return=minimal" },
+      body: JSON.stringify(SEED_ARTICLES),
+    });
   } catch (e) {
-    console.error("Failed to save articles", e);
-    alert("Could not save — your browser storage may be full (large images take a lot of space).");
+    console.error("Failed to seed database", e);
   }
 }
 
-function loadViews() {
+async function insertArticle(article) {
   try {
-    const raw = localStorage.getItem(VIEWS_KEY);
-    return raw ? JSON.parse(raw) : {};
+    const res = await fetch(SUPABASE_REST, {
+      method: "POST",
+      headers: { ...SUPABASE_HEADERS, Prefer: "return=minimal" },
+      body: JSON.stringify([article]),
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      throw new Error(`Insert failed: ${res.status} ${errText}`);
+    }
+    return true;
   } catch (e) {
-    return {};
+    console.error("Failed to insert article", e);
+    showToast("Could not publish — check your connection and try again.");
+    return false;
   }
 }
 
-function saveViews(map) {
+async function updateArticleRemote(id, fields) {
   try {
-    localStorage.setItem(VIEWS_KEY, JSON.stringify(map));
+    const res = await fetch(`${SUPABASE_REST}?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { ...SUPABASE_HEADERS, Prefer: "return=minimal" },
+      body: JSON.stringify(fields),
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      throw new Error(`Update failed: ${res.status} ${errText}`);
+    }
+    return true;
   } catch (e) {
-    console.error("Failed to save views", e);
+    console.error("Failed to update article", e);
+    showToast("Could not save changes — check your connection and try again.");
+    return false;
+  }
+}
+
+async function deleteArticleRemote(id) {
+  try {
+    const res = await fetch(`${SUPABASE_REST}?id=eq.${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: SUPABASE_HEADERS,
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      throw new Error(`Delete failed: ${res.status} ${errText}`);
+    }
+    return true;
+  } catch (e) {
+    console.error("Failed to delete article", e);
+    showToast("Could not delete — check your connection and try again.");
+    return false;
   }
 }
 
 function getViewCount(id) {
-  const views = loadViews();
-  return views[id] || 0;
+  const article = state.articles.find((a) => a.id === id);
+  return article ? article.views || 0 : 0;
 }
 
-function incrementView(id) {
-  const views = loadViews();
-  views[id] = (views[id] || 0) + 1;
-  saveViews(views);
+async function incrementView(id) {
+  const article = state.articles.find((a) => a.id === id);
+  if (!article) return;
+  const newCount = (article.views || 0) + 1;
+  article.views = newCount; // optimistic local update so UI reflects it immediately
+  try {
+    await fetch(`${SUPABASE_REST}?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { ...SUPABASE_HEADERS, Prefer: "return=minimal" },
+      body: JSON.stringify({ views: newCount }),
+    });
+  } catch (e) {
+    console.error("Failed to increment view count", e);
+  }
 }
 
 /* ---------- app state ---------- */
 let state = {
-  articles: loadArticles(),
+  articles: [],
   route: parseRoute(),
+  loading: true,
 };
 
 function parseRoute() {
@@ -796,8 +888,7 @@ function renderManageTable() {
     return `<div class="empty-state">No articles yet. Publish your first one from the "Publish New Article" tab.</div>`;
   }
 
-  const viewsMap = loadViews();
-  let rows = state.articles.map((a) => ({ ...a, views: viewsMap[a.id] || 0 }));
+  let rows = state.articles.map((a) => ({ ...a, views: a.views || 0 }));
 
   rows.sort((a, b) => {
     let av = a[sortKey], bv = b[sortKey];
@@ -1014,7 +1105,7 @@ function bindPublishFormEvents() {
     });
   }
 
-  form.addEventListener("submit", (e) => {
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
     captureFormIntoDraft();
 
@@ -1023,16 +1114,21 @@ function bindPublishFormEvents() {
     if (!formDraft.byline.trim()) { showToast("Please add a byline before publishing."); return; }
     if (!formDraft.body.trim()) { showToast("Please add body text before publishing."); return; }
 
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalLabel = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = editingId ? "Saving…" : "Publishing…";
+
+    let success = false;
+
     if (editingId) {
       const idx = state.articles.findIndex((a) => a.id === editingId);
-      if (idx !== -1) {
-        state.articles[idx] = {
-          ...state.articles[idx],
-          ...formDraft,
-          image: draftImage,
-        };
+      const updatedFields = { ...formDraft, image: draftImage };
+      success = await updateArticleRemote(editingId, updatedFields);
+      if (success && idx !== -1) {
+        state.articles[idx] = { ...state.articles[idx], ...updatedFields };
       }
-      showToast("Article updated.");
+      if (success) showToast("Article updated.");
       editingId = null;
     } else {
       const newArticle = {
@@ -1040,15 +1136,23 @@ function bindPublishFormEvents() {
         ...formDraft,
         image: draftImage,
         timestamp: Date.now(),
+        views: 0,
       };
-      state.articles.push(newArticle);
-      showToast("Article published.");
+      success = await insertArticle(newArticle);
+      if (success) {
+        state.articles.push(newArticle);
+        showToast("Article published.");
+      }
     }
 
-    saveArticles(state.articles);
-    formDraft = blankDraft();
-    draftImage = null;
-    adminTab = "manage";
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalLabel;
+
+    if (success) {
+      formDraft = blankDraft();
+      draftImage = null;
+      adminTab = "manage";
+    }
     render();
   });
 }
@@ -1117,15 +1221,16 @@ function bindManageTableEvents() {
   });
 
   document.querySelectorAll('[data-action="confirm-delete"]').forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
       const id = btn.dataset.id;
-      state.articles = state.articles.filter((a) => a.id !== id);
-      saveArticles(state.articles);
-      const views = loadViews();
-      delete views[id];
-      saveViews(views);
+      btn.disabled = true;
+      btn.textContent = "Deleting…";
+      const success = await deleteArticleRemote(id);
+      if (success) {
+        state.articles = state.articles.filter((a) => a.id !== id);
+        showToast("Article deleted.");
+      }
       pendingDeleteId = null;
-      showToast("Article deleted.");
       render();
     });
   });
@@ -1198,6 +1303,15 @@ function render() {
   let html = "";
   document.title = "The One Journal — Daily News, World & Tech";
 
+  if (state.loading) {
+    document.getElementById("app").innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Source Serif 4',Georgia,serif;font-size:18px;color:#5A6472;">
+        Loading The One Journal…
+      </div>
+    `;
+    return;
+  }
+
   if (route === "") {
     html = renderFrontPage();
   } else if (route.startsWith("section/")) {
@@ -1221,4 +1335,11 @@ function render() {
   if (route === "admin") bindAdminEvents();
 }
 
-render();
+async function init() {
+  render(); // show loading state immediately
+  state.articles = await loadArticles();
+  state.loading = false;
+  render();
+}
+
+init();
