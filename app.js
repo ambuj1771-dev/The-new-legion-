@@ -17,6 +17,7 @@ const CONTACT_EMAIL = "theonejournal2026@gmail.com";
 const PHONE_NUMBER = "+91 6393079532";
 const YT_NAME = "ADI GEOSPACE";
 const YT_URL = "https://www.youtube.com/@Adigeospace";
+const FORMSPREE_ENDPOINT = "https://formspree.io/f/xeebkkyp";
 
 /* ---------- seed data so the site isn't empty on first load ---------- */
 const SEED_ARTICLES = [
@@ -572,17 +573,18 @@ function renderContactPage() {
           <h3>Send a Message</h3>
           <div class="form-field">
             <label for="cf-name">Name</label>
-            <input id="cf-name" type="text" required>
+            <input id="cf-name" name="name" type="text" required>
           </div>
           <div class="form-field">
             <label for="cf-email">Email</label>
-            <input id="cf-email" type="email" required>
+            <input id="cf-email" name="email" type="email" required>
           </div>
           <div class="form-field">
             <label for="cf-msg">Message</label>
-            <textarea id="cf-msg" required></textarea>
+            <textarea id="cf-msg" name="message" required></textarea>
           </div>
-          <button type="submit" class="btn red">Send Message</button>
+          <button type="submit" class="btn red" id="cfSubmitBtn">Send Message</button>
+          <div id="cfStatus" style="margin-top:10px;font-size:13px;font-family:var(--mono);"></div>
         </form>
       </div>
     </div>
@@ -1147,10 +1149,42 @@ function bindGlobalEvents() {
 
   const contactForm = document.getElementById("contactForm");
   if (contactForm) {
-    contactForm.addEventListener("submit", (e) => {
+    contactForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      showToast("Message received — we'll get back to you soon. (Demo form — no backend connected.)");
-      contactForm.reset();
+      const btn = document.getElementById("cfSubmitBtn");
+      const status = document.getElementById("cfStatus");
+      const formData = new FormData(contactForm);
+
+      btn.disabled = true;
+      btn.textContent = "Sending…";
+      status.textContent = "";
+      status.style.color = "";
+
+      try {
+        const res = await fetch(FORMSPREE_ENDPOINT, {
+          method: "POST",
+          body: formData,
+          headers: { Accept: "application/json" },
+        });
+
+        if (res.ok) {
+          showToast("Message sent — we'll get back to you soon.");
+          contactForm.reset();
+          status.textContent = "Sent successfully.";
+          status.style.color = "var(--ok)";
+        } else {
+          const data = await res.json().catch(() => null);
+          const msg = data && data.errors ? data.errors.map((er) => er.message).join(", ") : "Something went wrong sending your message.";
+          status.textContent = msg;
+          status.style.color = "var(--red)";
+        }
+      } catch (err) {
+        status.textContent = "Could not send — check your connection and try again.";
+        status.style.color = "var(--red)";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Send Message";
+      }
     });
   }
 }
