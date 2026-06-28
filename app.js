@@ -126,6 +126,7 @@ function normalizeRow(row) {
     featured: row.featured,
     timestamp: row.timestamp,
     views: row.views || 0,
+    tags: row.tags || "",
   };
 }
 
@@ -286,6 +287,24 @@ function slugToSection(slug) {
   return SECTIONS.find((s) => sectionSlug(s) === slug);
 }
 
+function parseTags(tagsString) {
+  if (!tagsString) return [];
+  return tagsString
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
+
+function tagSlug(tag) {
+  return tag.toLowerCase().trim().replace(/\s+/g, "-");
+}
+
+function getArticlesByTag(slug) {
+  return state.articles
+    .filter((a) => parseTags(a.tags).some((t) => tagSlug(t) === slug))
+    .sort((a, b) => b.timestamp - a.timestamp);
+}
+
 function getArticlesBySection(section) {
   return state.articles
     .filter((a) => a.section === section)
@@ -304,6 +323,16 @@ function getLeadStory() {
 
 function findArticle(id) {
   return state.articles.find((a) => a.id === id);
+}
+
+function setMetaDescription(text) {
+  let tag = document.querySelector('meta[name="description"]');
+  if (!tag) {
+    tag = document.createElement("meta");
+    tag.setAttribute("name", "description");
+    document.head.appendChild(tag);
+  }
+  tag.setAttribute("content", text ? text.slice(0, 160) : "");
 }
 
 function showToast(msg) {
@@ -533,6 +562,44 @@ function renderSectionPage(slug) {
   `;
 }
 
+function renderTagPage(slug) {
+  const items = getArticlesByTag(slug);
+  const displayName = items.length ? parseTags(items[0].tags).find((t) => tagSlug(t) === slug) : slug.replace(/-/g, " ");
+  document.title = `${displayName} — Tagged Articles — The One Journal`;
+  setMetaDescription(`Articles tagged "${displayName}" on The One Journal.`);
+
+  if (!items.length) {
+    return `
+      <h1 class="page-title">Tag: ${escapeHtml(displayName)}</h1>
+      <div class="empty-state">No articles found with this tag yet.</div>
+    `;
+  }
+
+  return `
+    <h1 class="page-title">Tag: ${escapeHtml(displayName)}</h1>
+    <div class="story-list">
+      ${items
+        .map(
+          (a) => `
+        <article class="story-row ${a.image ? "" : "no-img"}">
+          <div>
+            <div class="section-eyebrow">
+              ${a.breaking ? `<span class="tag-breaking">Breaking</span>` : ""}
+              <span>${escapeHtml(a.section)}</span>
+            </div>
+            <h3><a href="#/article/${a.id}">${escapeHtml(a.headline)}</a></h3>
+            <p class="deck">${escapeHtml(a.deck)}</p>
+            <div class="byline-row">By <b>${escapeHtml(a.byline)}</b> · ${relativeTime(a.timestamp)}</div>
+          </div>
+          ${a.image ? `<img class="thumb" src="${a.image}" alt="">` : ""}
+        </article>
+      `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
 /* =========================================================
    ARTICLE PAGE
    ========================================================= */
@@ -546,12 +613,14 @@ function renderArticlePage(id) {
   }
 
   document.title = `${article.headline} — The One Journal`;
+  setMetaDescription(article.deck);
 
   if (!viewedThisSession.has(id)) {
     incrementView(id);
     viewedThisSession.add(id);
   }
   const views = getViewCount(id);
+  const tags = parseTags(article.tags);
 
   return `
     <a href="#/" class="article-back">&larr; Back</a>
@@ -574,6 +643,13 @@ function renderArticlePage(id) {
         : ""
     }
     <div class="article-body">${nl2paragraphs(article.body)}</div>
+    ${
+      tags.length
+        ? `<div class="tag-row" style="max-width:680px;margin:0 auto 20px;">
+            ${tags.map((t) => `<a href="#/tag/${tagSlug(t)}" class="tag-chip">${escapeHtml(t)}</a>`).join("")}
+          </div>`
+        : ""
+    }
     <div style="max-width:680px;margin:36px auto 0;">
       <a href="#/" class="article-back">&larr; Back to Front Page</a>
     </div>
@@ -761,6 +837,7 @@ function blankDraft() {
     caption: "",
     breaking: false,
     featured: false,
+    tags: "",
   };
 }
 
@@ -820,6 +897,10 @@ function renderPublishForm() {
             <div class="form-field">
               <label for="f-byline">Byline (Author)</label>
               <input id="f-byline" type="text" value="${escapeHtml(d.byline)}" placeholder="e.g. Jordan Lee">
+            </div>
+            <div class="form-field">
+              <label for="f-tags">Tags (comma-separated)</label>
+              <input id="f-tags" type="text" value="${escapeHtml(d.tags || "")}" placeholder="e.g. Iran, War, Middle East">
             </div>
           </fieldset>
 
@@ -1163,6 +1244,7 @@ function captureFormIntoDraft() {
   if (get("f-headline")) formDraft.headline = get("f-headline").value;
   if (get("f-deck")) formDraft.deck = get("f-deck").value;
   if (get("f-byline")) formDraft.byline = get("f-byline").value;
+  if (get("f-tags")) formDraft.tags = get("f-tags").value;
   if (get("f-body")) formDraft.body = get("f-body").value;
   if (get("f-caption")) formDraft.caption = get("f-caption").value;
   if (get("f-breaking")) formDraft.breaking = get("f-breaking").checked;
@@ -1199,6 +1281,7 @@ function bindManageTableEvents() {
         caption: a.caption || "",
         breaking: a.breaking,
         featured: a.featured,
+        tags: a.tags || "",
       };
       draftImage = a.image || null;
       adminTab = "publish";
@@ -1318,6 +1401,8 @@ function render() {
     html = renderSectionPage(route.replace("section/", ""));
   } else if (route.startsWith("article/")) {
     html = renderArticlePage(route.replace("article/", ""));
+  } else if (route.startsWith("tag/")) {
+    html = renderTagPage(route.replace("tag/", ""));
   } else if (route === "about") {
     html = renderAboutPage();
   } else if (route === "privacy") {
