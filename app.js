@@ -15,6 +15,8 @@ const CONTACT_EMAIL = "theonejournal2026@gmail.com";
 const PHONE_NUMBER = "+91 6393079532";
 const YT_NAME = "ADI GEOSPACE";
 const YT_URL = "https://www.youtube.com/@Adigeospace";
+const UPI_ID = "6393079532@fam";
+const QR_CODE_IMAGE = "upi-qr.jpeg"; // place this file next to index.html and app.js
 const FORMSPREE_ENDPOINT = "https://formspree.io/f/xeebkkyp";
 
 /* ---------- Supabase config (shared database for all visitors) ---------- */
@@ -383,6 +385,10 @@ function renderShell(innerHtml) {
         </a>
         <div class="tagline">Daily News · World &amp; Technology</div>
       </div>
+      <button class="support-bar" id="supportBarBtn" aria-label="Support independent journalism">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        <span>Support Independent Journalism</span>
+      </button>
       <nav class="main-nav">
         <div class="nav-inner">
           <a href="#/" class="${navActive("")}">Front Page</a>
@@ -788,35 +794,55 @@ function renderLockModal() {
   `;
 }
 
-function mountLockModal() {
-  const root = document.getElementById("modalRoot");
-  root.innerHTML = renderLockModal();
-  const overlay = document.getElementById("lockOverlay");
-  const form = document.getElementById("lockForm");
-  const input = document.getElementById("pwInput");
-  const err = document.getElementById("lockErr");
+function renderSupportModal() {
+  return `
+    <div class="modal-overlay" id="supportOverlay">
+      <div class="modal-box support-modal">
+        <button class="support-close" id="supportClose" aria-label="Close">&times;</button>
+        <div class="support-heart">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </div>
+        <h2>Support Independent Journalism</h2>
+        <p class="support-copy">
+          The One Journal is not funded by any government, agency, or organization. This site runs entirely on one person's ambition — to build independent, non-biased journalism, free from outside influence. Your single donation directly powers that ambition.
+        </p>
+        <div class="support-qr-wrap">
+          ${QR_CODE_IMAGE ? `<img src="${QR_CODE_IMAGE}" alt="UPI QR Code" class="support-qr">` : `<div class="support-qr-placeholder">QR Code</div>`}
+        </div>
+        <div class="support-upi-row">
+          <span class="support-upi-label">UPI ID</span>
+          <span class="support-upi-id" id="upiIdText">${escapeHtml(UPI_ID)}</span>
+          <button class="btn ghost support-copy-btn" id="copyUpiBtn" type="button">Copy</button>
+        </div>
+        <p class="support-thanks">Every contribution, big or small, helps keep this journal independent. Thank you.</p>
+      </div>
+    </div>
+  `;
+}
 
-  input.focus();
+function mountSupportModal() {
+  const root = document.getElementById("modalRoot");
+  root.innerHTML = renderSupportModal();
+  const overlay = document.getElementById("supportOverlay");
 
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) root.innerHTML = "";
   });
-  document.getElementById("lockCancel").addEventListener("click", () => {
+  document.getElementById("supportClose").addEventListener("click", () => {
     root.innerHTML = "";
   });
-  form.addEventListener("submit", (e) => {
-    e.preventDefault();
-    if (input.value === ADMIN_PW) {
-      sessionStorage.setItem(SESSION_KEY, "1");
-      root.innerHTML = "";
-      window.location.hash = "#/admin";
-    } else {
-      err.textContent = "Incorrect password. Try again.";
-      input.value = "";
-      input.focus();
+  document.getElementById("copyUpiBtn").addEventListener("click", async () => {
+    const btn = document.getElementById("copyUpiBtn");
+    try {
+      await navigator.clipboard.writeText(UPI_ID);
+      btn.textContent = "Copied!";
+      setTimeout(() => { btn.textContent = "Copy"; }, 1800);
+    } catch (e) {
+      showToast("Could not copy — please copy the UPI ID manually.");
     }
   });
 }
+
 
 /* =========================================================
    ADMIN PANEL
@@ -1335,6 +1361,13 @@ function bindGlobalEvents() {
       } else {
         mountLockModal();
       }
+    });
+  }
+
+  const supportBarBtn = document.getElementById("supportBarBtn");
+  if (supportBarBtn) {
+    supportBarBtn.addEventListener("click", () => {
+      mountSupportModal();
     });
   }
 

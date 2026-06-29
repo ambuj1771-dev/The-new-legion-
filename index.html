@@ -75,6 +75,42 @@ input,textarea,select{font-family:inherit;}
   color:var(--slate);margin-top:8px;
 }
 
+/* ===== Support / Donation Bar ===== */
+.support-bar{
+  display:flex;align-items:center;justify-content:center;gap:9px;width:100%;
+  background:linear-gradient(90deg, #FBF3DE, #F5E8C8, #FBF3DE);
+  border-top:1px solid #E2CE94;border-bottom:1px solid #E2CE94;
+  color:#7A5B12;font-family:var(--mono);font-size:12px;font-weight:700;
+  letter-spacing:.06em;text-transform:uppercase;padding:9px 16px;cursor:pointer;
+}
+.support-bar svg{width:14px;height:14px;flex-shrink:0;}
+.support-bar:hover{background:linear-gradient(90deg, #F5E8C8, #EFDCAE, #F5E8C8);}
+
+.support-modal{max-width:420px;text-align:center;position:relative;padding-top:36px;}
+.support-close{
+  position:absolute;top:10px;right:14px;background:none;border:none;font-size:24px;
+  color:var(--slate);cursor:pointer;line-height:1;
+}
+.support-close:hover{color:var(--ink);}
+.support-heart{color:#C8952E;margin-bottom:10px;}
+.support-heart svg{width:30px;height:30px;}
+.support-modal h2{font-size:21px;margin-bottom:14px;}
+.support-copy{font-size:13.5px;color:var(--slate);line-height:1.6;text-align:left;margin-bottom:20px;}
+.support-qr-wrap{display:flex;justify-content:center;margin-bottom:18px;}
+.support-qr{width:180px;height:180px;border:4px solid var(--paper);box-shadow:0 0 0 1px var(--rule-strong), 0 6px 18px rgba(0,0,0,0.12);border-radius:4px;object-fit:cover;}
+.support-qr-placeholder{
+  width:180px;height:180px;border:1.5px dashed var(--rule-strong);display:flex;align-items:center;
+  justify-content:center;color:var(--slate);font-family:var(--mono);font-size:12px;background:var(--cream-deep);
+}
+.support-upi-row{
+  display:flex;align-items:center;gap:8px;justify-content:center;background:var(--cream-deep);
+  border:1px solid var(--rule);padding:10px 12px;margin-bottom:16px;
+}
+.support-upi-label{font-family:var(--mono);font-size:10px;text-transform:uppercase;color:var(--slate);letter-spacing:.05em;}
+.support-upi-id{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--ink);flex:1;text-align:left;word-break:break-all;}
+.support-copy-btn{padding:6px 12px;font-size:11px;flex-shrink:0;}
+.support-thanks{font-size:12.5px;color:var(--slate);font-style:italic;}
+
 nav.main-nav{
   background:var(--ink);border-top:1px solid #0c1626;
 }
