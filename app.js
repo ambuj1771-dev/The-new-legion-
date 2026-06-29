@@ -9,7 +9,7 @@
 const ADMIN_PW = "solojournal2026";
 const SESSION_KEY = "toj_admin_session";
 
-const SECTIONS = ["World", "Tech", "HTML Journal"];
+const SECTIONS = ["World", "Regional Watch", "Tech", "HTML Journal"];
 
 const CONTACT_EMAIL = "theonejournal2026@gmail.com";
 const PHONE_NUMBER = "+91 6393079532";
@@ -387,6 +387,7 @@ function renderShell(innerHtml) {
         <div class="nav-inner">
           <a href="#/" class="${navActive("")}">Front Page</a>
           <a href="#/section/world" class="${route === "section/world" ? "active" : ""}">World</a>
+          <a href="#/section/regional-watch" class="${route === "section/regional-watch" ? "active" : ""}">Regional Watch</a>
           <a href="#/section/tech" class="${route === "section/tech" ? "active" : ""}">Tech</a>
           <a href="#/section/html-journal" class="${route === "section/html-journal" ? "active" : ""}">HTML Journal</a>
         </div>
@@ -415,6 +416,7 @@ function renderFooter() {
           <h5>Sections</h5>
           <div class="footer-links">
             <a href="#/section/world">World</a>
+            <a href="#/section/regional-watch">Regional Watch</a>
             <a href="#/section/tech">Tech</a>
             <a href="#/section/html-journal">HTML Journal</a>
           </div>
@@ -494,6 +496,7 @@ function renderFrontPage() {
       <div class="story-list">${listHtml}</div>
       <div class="rail">
         ${renderRail("World")}
+        ${renderRail("Regional Watch")}
         ${renderRail("Tech")}
       </div>
     </div>
