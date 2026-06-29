@@ -794,6 +794,36 @@ function renderLockModal() {
   `;
 }
 
+function mountLockModal() {
+  const root = document.getElementById("modalRoot");
+  root.innerHTML = renderLockModal();
+  const overlay = document.getElementById("lockOverlay");
+  const form = document.getElementById("lockForm");
+  const input = document.getElementById("pwInput");
+  const err = document.getElementById("lockErr");
+
+  input.focus();
+
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) root.innerHTML = "";
+  });
+  document.getElementById("lockCancel").addEventListener("click", () => {
+    root.innerHTML = "";
+  });
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (input.value === ADMIN_PW) {
+      sessionStorage.setItem(SESSION_KEY, "1");
+      root.innerHTML = "";
+      window.location.hash = "#/admin";
+    } else {
+      err.textContent = "Incorrect password. Try again.";
+      input.value = "";
+      input.focus();
+    }
+  });
+}
+
 function renderSupportModal() {
   return `
     <div class="modal-overlay" id="supportOverlay">
