@@ -15,6 +15,17 @@
   <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,700;8..60,900&family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 </noscript>
 
+<!-- OneSignal Notification SDK -->
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(function(OneSignal) {
+    OneSignal.init({
+      appId: "YOUR_ONESIGNAL_APP_ID_HERE", // 🔥 YAHAN APNI APP ID DAALO
+    });
+  });
+</script>
+
 <style>
   :root {
     --ink: #0A192F; /* Dark Navy */
@@ -114,6 +125,14 @@
     letter-spacing: 0.06em;
     color: var(--slate);
     text-transform: uppercase;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .masthead-top .date-line {
+    display: flex;
+    align-items: center;
+    gap: 10px;
   }
 
   .lock-btn {
@@ -148,6 +167,7 @@
     margin: 0 auto;
     padding: 8px 24px 24px;
     text-align: center;
+    position: relative;
   }
 
   .masthead h1 {
@@ -187,6 +207,43 @@
     display: inline-block;
   }
 
+  /* ===== Follow Button - Top Bar ===== */
+  .follow-btn-top {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--gold);
+    background: transparent;
+    border: 1.5px solid var(--gold);
+    border-radius: 40px;
+    padding: 5px 14px 5px 10px;
+    cursor: pointer;
+    transition: var(--transition);
+    backdrop-filter: blur(4px);
+    white-space: nowrap;
+  }
+
+  .follow-btn-top:hover {
+    background: var(--gold);
+    color: var(--ink);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(201, 160, 78, 0.3);
+  }
+
+  .follow-btn-top svg {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.5;
+  }
+
+  /* ===== Support Bar ===== */
   .support-bar {
     display: flex;
     align-items: center;
@@ -220,6 +277,7 @@
     stroke-width: 2;
   }
 
+  /* ===== Navigation ===== */
   nav.main-nav {
     background: var(--ink);
     border-top: 2px solid var(--gold);
@@ -263,6 +321,7 @@
     border-bottom-color: var(--gold);
   }
 
+  /* ===== Ticker ===== */
   .ticker-wrap {
     background: linear-gradient(90deg, var(--red), var(--red-deep));
     color: #fff;
@@ -325,12 +384,14 @@
     }
   }
 
+  /* ===== Main Layout ===== */
   main {
     max-width: 1240px;
     margin: 0 auto;
     padding: 40px 24px 80px;
   }
 
+  /* ===== Article Cards ===== */
   .story-row {
     display: grid;
     grid-template-columns: 1fr 160px;
@@ -390,6 +451,7 @@
     grid-template-columns: 1fr;
   }
 
+  /* ===== Lead Story (Hero) ===== */
   .lead-story {
     display: grid;
     grid-template-columns: 1.2fr 0.8fr;
@@ -437,6 +499,7 @@
     text-decoration-color: var(--gold);
   }
 
+  /* ===== Donation Box (Premium) ===== */
   .support-modal {
     max-width: 440px;
     text-align: center;
@@ -504,6 +567,7 @@
     transform: scale(1.04);
   }
 
+  /* ===== Glassmorphism Cards (For Rail) ===== */
   .rail {
     border-left: none;
     padding-left: 0;
@@ -548,6 +612,7 @@
     color: var(--red);
   }
 
+  /* ===== Buttons (Premium) ===== */
   .btn {
     display: inline-flex;
     align-items: center;
@@ -592,6 +657,7 @@
     border-color: var(--gold);
   }
 
+  /* ===== Footer ===== */
   footer {
     background: linear-gradient(135deg, var(--ink), #0D1B2A);
     color: #C9D1E0;
@@ -637,6 +703,7 @@
     color: rgba(255, 255, 255, 0.3);
   }
 
+  /* ===== Responsive ===== */
   @media (max-width: 860px) {
     .lead-story {
       grid-template-columns: 1fr;
@@ -667,6 +734,7 @@
     .masthead-top {
       flex-wrap: wrap;
       gap: 8px;
+      justify-content: center;
     }
     .support-modal {
       margin: 16px;
@@ -676,8 +744,13 @@
       width: 140px;
       height: 140px;
     }
+    .follow-btn-top {
+      font-size: 9px;
+      padding: 4px 10px 4px 8px;
+    }
   }
 
+  /* ===== Smooth Page Transitions ===== */
   #app > * {
     animation: fadeUp 0.6s ease forwards;
   }
@@ -693,6 +766,7 @@
     }
   }
 
+  /* ===== Toast ===== */
   .toast {
     border-left: 4px solid var(--gold);
     border-radius: 12px;
@@ -702,7 +776,29 @@
 </head>
 <body>
 <a href="#main" class="skip-link">Skip to content</a>
-<div id="app"></div>
+
+<div id="app">
+  <!-- App content will be rendered by JavaScript -->
+</div>
+
 <script defer src="app.js"></script>
+
+<!-- Follow Button Click Handler -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Follow button click handler (will be attached after app renders)
+    document.addEventListener('click', function(e) {
+      const target = e.target.closest('#followBtn, .follow-btn-top');
+      if (target) {
+        e.preventDefault();
+        if (window.OneSignal) {
+          OneSignal.registerForPushNotifications();
+        } else {
+          alert('Please allow notifications in your browser settings.');
+        }
+      }
+    });
+  });
+</script>
 </body>
 </html>
