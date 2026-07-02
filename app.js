@@ -16,10 +16,10 @@ const PHONE_NUMBER = "+91 6393079532";
 const YT_NAME = "ADI GEOSPACE";
 const YT_URL = "https://www.youtube.com/@Adigeospace";
 const UPI_ID = "6393079532@fam";
-const QR_CODE_IMAGE = "upi-qr.jpeg";
+const QR_CODE_IMAGE = "upi-qr.jpeg"; // place this file next to index.html and app.js
 const FORMSPREE_ENDPOINT = "https://formspree.io/f/xeebkkyp";
 
-/* ---------- Supabase config ---------- */
+/* ---------- Supabase config (shared database for all visitors) ---------- */
 const SUPABASE_URL = "https://uphlhpzgozzswxsacuam.supabase.co";
 const SUPABASE_KEY = "sb_publishable_ihyMlIjeD1YJk6yZDvEbgQ_3VUrDfAR";
 const SUPABASE_REST = `${SUPABASE_URL}/rest/v1/articles`;
@@ -29,7 +29,7 @@ const SUPABASE_HEADERS = {
   "Content-Type": "application/json",
 };
 
-/* ---------- Seed data ---------- */
+/* ---------- seed data so the site isn't empty on first load ---------- */
 const SEED_ARTICLES = [
   {
     id: "seed-1",
@@ -85,7 +85,7 @@ const SEED_ARTICLES = [
   },
 ];
 
-/* ---------- Storage helpers ---------- */
+/* ---------- storage helpers (Supabase-backed, shared across all visitors) ---------- */
 let seedAttempted = false;
 
 async function loadArticles() {
@@ -209,7 +209,7 @@ async function incrementView(id) {
   const article = state.articles.find((a) => a.id === id);
   if (!article) return;
   const newCount = (article.views || 0) + 1;
-  article.views = newCount;
+  article.views = newCount; // optimistic local update so UI reflects it immediately
   try {
     await fetch(`${SUPABASE_REST}?id=eq.${encodeURIComponent(id)}`, {
       method: "PATCH",
@@ -221,7 +221,7 @@ async function incrementView(id) {
   }
 }
 
-/* ---------- App state ---------- */
+/* ---------- app state ---------- */
 let state = {
   articles: [],
   route: parseRoute(),
@@ -239,7 +239,7 @@ window.addEventListener("hashchange", () => {
   window.scrollTo(0, 0);
 });
 
-/* ---------- Utility ---------- */
+/* ---------- utility ---------- */
 function uid() {
   return "a" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
@@ -352,7 +352,7 @@ function isAdminUnlocked() {
 }
 
 /* =========================================================
-   SHELL
+   SHELL: masthead, ticker, nav, footer
    ========================================================= */
 
 function renderShell(innerHtml) {
@@ -666,7 +666,7 @@ function renderArticlePage(id) {
 }
 
 /* =========================================================
-   STATIC PAGES
+   STATIC PAGES: About, Privacy, Contact
    ========================================================= */
 
 function renderAboutPage() {
@@ -690,14 +690,19 @@ function renderPrivacyPage() {
     <div class="static-page">
       <h1>Privacy Policy</h1>
       <span class="updated">Last updated: ${new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}</span>
+
       <p>This Privacy Policy explains how The One Journal ("we," "us," or "our") collects, uses, and protects information when you visit our website. By using this site, you agree to the terms described below.</p>
+
       <h2>1. Information We Collect</h2>
       <p>We may collect limited information automatically when you visit our site, including your IP address, browser type, device type, pages viewed, and time spent on the site. If you use our contact form, we collect the name, email address, and message you voluntarily provide.</p>
+
       <h2>2. Cookies</h2>
       <p>Our site may use cookies and similar tracking technologies to improve your browsing experience, remember preferences, and analyze site traffic. You can disable cookies through your browser settings, though some features of the site may not function properly without them.</p>
+
       <h2>3. Third-Party Advertising</h2>
       <p>We may use third-party advertising companies, such as Google AdSense, to serve ads when you visit our site. These companies may use cookies and similar technologies to collect information about your visits to this and other websites in order to provide advertisements about goods and services of interest to you. Google's use of advertising cookies enables it and its partners to serve ads based on your visits to this site and/or other sites on the Internet.</p>
       <p>You may opt out of personalized advertising by visiting Google's Ads Settings, and you can learn more about how Google uses data at Google's Privacy &amp; Terms page.</p>
+
       <h2>4. How We Use Information</h2>
       <ul>
         <li>To operate, maintain, and improve our website</li>
@@ -705,14 +710,19 @@ function renderPrivacyPage() {
         <li>To analyze site traffic and reader engagement</li>
         <li>To display relevant advertising through third-party partners</li>
       </ul>
+
       <h2>5. Data Sharing</h2>
       <p>We do not sell your personal information. We may share limited data with service providers (such as analytics or advertising partners) strictly to operate and monetize the site, in accordance with their own privacy policies.</p>
+
       <h2>6. Data Security</h2>
       <p>We take reasonable measures to protect information collected through this site. However, no method of transmission over the internet is completely secure, and we cannot guarantee absolute security.</p>
+
       <h2>7. Children's Privacy</h2>
       <p>This site is not directed at children under 13, and we do not knowingly collect personal information from children.</p>
+
       <h2>8. Changes to This Policy</h2>
       <p>We may update this Privacy Policy from time to time. Changes will be posted on this page with an updated revision date.</p>
+
       <h2>9. Contact Us</h2>
       <p>If you have questions about this Privacy Policy or how your information is handled, please contact us at <a href="mailto:${CONTACT_EMAIL}" style="color:var(--red);">${CONTACT_EMAIL}</a>.</p>
     </div>
@@ -726,6 +736,7 @@ function renderContactPage() {
       <h1>Contact Us</h1>
       <span class="updated">We'd love to hear from you</span>
       <p>Have a tip, a correction, or feedback on a story? Reach out using the details below or send us a message directly.</p>
+
       <div class="contact-grid">
         <div class="contact-card">
           <h3>Email</h3>
@@ -758,7 +769,7 @@ function renderContactPage() {
 }
 
 /* =========================================================
-   ADMIN
+   ADMIN: lock modal
    ========================================================= */
 
 function renderLockModal() {
@@ -862,16 +873,17 @@ function mountSupportModal() {
   });
 }
 
+
 /* =========================================================
    ADMIN PANEL
    ========================================================= */
 
-let adminTab = "publish";
-let editingId = null;
+let adminTab = "publish"; // 'publish' | 'manage'
+let editingId = null; // article id currently being edited, or null for new
 let pendingDeleteId = null;
 let sortKey = "timestamp";
 let sortDir = "desc";
-let draftImage = null;
+let draftImage = null; // base64 string staged from file input
 
 function blankDraft() {
   return {
@@ -1087,13 +1099,14 @@ function renderManageTable() {
 }
 
 /* =========================================================
-   ADMIN: event binding
+   ADMIN: event binding (form submit, file uploads, table actions)
    ========================================================= */
 
 function htmlToPlainText(htmlString) {
   const doc = new DOMParser().parseFromString(htmlString, "text/html");
   doc.querySelectorAll("script,style").forEach((el) => el.remove());
 
+  // Convert block-level breaks into double newlines so paragraphs survive.
   doc.querySelectorAll("p,div,br,h1,h2,h3,h4,h5,h6,li").forEach((el) => {
     el.insertAdjacentText("afterend", "\n\n");
   });
@@ -1366,7 +1379,7 @@ function bindManageTableEvents() {
 }
 
 /* =========================================================
-   GLOBAL EVENTS
+   GLOBAL EVENTS: lock button, contact form
    ========================================================= */
 
 function bindGlobalEvents() {
@@ -1474,7 +1487,7 @@ function render() {
 }
 
 async function init() {
-  render();
+  render(); // show loading state immediately
   state.articles = await loadArticles();
   state.loading = false;
   render();
